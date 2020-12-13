@@ -1,4 +1,0 @@
-*.vscode
-*.ipynb_checkpoints
-Supervised//Regression//Linear//Example/__pycache__
-
