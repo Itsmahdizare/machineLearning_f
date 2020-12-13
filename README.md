@@ -32,11 +32,14 @@ project contents :
 	note : data sets used in examples are available in 'data' folder beside each 'example' folder.
 
 
-What's new in version:
+changes in version:
+
+1.1.2:
+    - various updates for algorithms.
     
 1.1.1:
-    read me updated.
-    deleted house price data.
+    - read me updated.
+    - deleted house price data.
 
 1.1.0:
     - a huge update for algorithms. I have completely changed the base of my algorithms. i also added OOP programming to combine logistic regression and linear regression in a unique class.
