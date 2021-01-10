@@ -22,13 +22,18 @@ class LinearLogisticRegression():
         initial weight matrix
     m : int
         an integer number which is usually length of the given data
-    tag : str , optional
+    kind : str , optional
         order : {LinearRegression , LogisticRegression}
         to determine the problem type
     standard : boolean , optional
         if true, the parameter "x" will get these new features : (mean = 0 , std = 1)
+    penalty : str , optional
+        order : {'L1','L2'}
+        regularization technique.
+    alpha : float , optional
+        regularization hyper parameter.
     '''
-    def __init__(self, x=None, y=None, w=None, bias = 0, m=None, tag='LinearRegression',standard=False,bias_included=False):
+    def __init__(self, x, y, w=None, bias = 0, m=None, kind='LinearRegression',standard=False,bias_included=False,penalty='L2',alpha = 0):
 
         e.NumpyErrorCheck(x, y, w)
         ##########################
@@ -44,16 +49,18 @@ class LinearLogisticRegression():
             else:
                 raise TypeError(''' m must be an integer.''')
         ##########################
-        if tag != 'LinearRegression' :
-            if tag != 'LogisticRegression':
-                raise ValueError(tag)
+        if kind != 'LinearRegression' :
+            if kind != 'LogisticRegression':
+                raise ValueError(kind)
         ########################### 
     
         self.x = x
         self.y = y
         self.m = m
         self.bias = bias
-        self.tag_ = tag
+        self.penalty = penalty
+        self.alpha = alpha
+        self.kind_ = kind
 
         if w is not None:
             self.w = w
@@ -91,10 +98,19 @@ class LinearLogisticRegression():
 
         return x,y,w,bias
 
+    def _penalty(self,w):
 
-    def Hyp(self, degree = 1, interaction=True, random_weight = False, **kwargs):
+        if self.penalty =='L2':
+            #return self.alpha * np.sum(np.square(w))
+            return self.alpha * (w.T @ w)[0,0]
+        elif self.penalty =='L1':
+            return self.alpha * np.sum(np.abs(w))
+        else:
+            raise ValueError(f'''invalid value "{self.penalty}"''')
+
+    def predict(self, degree = 1, interaction=True, random_weight = False, **kwargs):
         '''
-        hypothesis function for linear models.
+        hypothesis function for supervised models.
 
         Parameters
         ----------
@@ -104,7 +120,6 @@ class LinearLogisticRegression():
         kwargs : dictionary, optional
             it is for passing other arguments, beside self arguments.
             names {x , y , w} are only accepted.
-
 
         Returns
         -------
@@ -116,9 +131,9 @@ class LinearLogisticRegression():
         #######################    
         x,_,w,bias = self.__init_algs__( kwargs)
         poly = PolynomialFeatures(degree=degree,include_bias=False)
-        if self.tag_ == 'LinearRegression':
+        if self.kind_ == 'LinearRegression':
             def activeF(x): return x
-        elif self.tag_ == 'LogisticRegression':
+        elif self.kind_ == 'LogisticRegression':
             def activeF(x): return 1 / (1 + np.exp(-x))
         else:
             raise e.ActiveFuncError(
@@ -159,19 +174,19 @@ class LinearLogisticRegression():
 
             
         if A == 'MSE':
-            def loss(H, m, y): return 1/m * np.sum(np.square(H - y))
-        elif A == 'MLE':
-            def loss(H, m, y): return 1/m * np.sum( (-y * np.log(H)) - ((1-y)*np.log(1-H))) 
+            def loss(p, m, y): return 1/m * (np.sum(np.square(p - y)) + self._penalty(w))
         elif A == 'VEC_MSE':
-            def loss(H, m, y): return 1/m * ((H - y).T @ (H - y))[0, 0]
+            def loss(H, m, y): return 1/m * ( ((H - y).T @ (H - y))[0, 0] + self._penalty(w) )
+        elif A == 'MLE':
+            def loss(H, m, y): return 1/m * (np.sum( (-y * np.log(H)) - ((1-y)*np.log(1-H)) ) + self._penalty(w)) 
         else:
             raise ValueError(
                         'invalid value for parameter %s' % 'A')
-        return loss(self.Hyp(x=x,w=w,bias = bias), m= self.m,y = y)
+        return loss(self.predict(x=x,w=w,bias = bias), m= self.m,y = y)
 
 
 
-    def gradient_descent(self,los='MSE', lr=.001, maxIter=100, converLim=0.001,verbose=0 ,Type='batch', fit_bias=True ,plot_j=False,inplace=False,**kwargs):
+    def gradient_descent(self,los='MSE', lr=.001, maxIter=100, converLim=0.001,verbose=0 ,Type='batch', plot_j=False,inplace=False,**kwargs):
         '''
         Gradient descent algorithm .
 
@@ -199,9 +214,12 @@ class LinearLogisticRegression():
         inplace : bool , optional
             default = False
             if True , self weights will be updated.
-        fit_bias : bool , optional
-            default = True
-            if true, bias will be optimised.
+        just_fit = bool , optional
+            default = False
+            if True , weights will be shown in output, but the model still learns.
+            recommended (to be more like sikit learn fit function) :
+            just_fit = True
+            inplace = True
         kwargs : dictionary, optional
             it is for passing other arguments, beside self arguments.
             names {x , y , w} are only accepted.
@@ -222,7 +240,7 @@ class LinearLogisticRegression():
             if Type == 'stochastic':
                 idx = np.random.randint(len(x), size=1)
             elif Type == 'mini-batch':
-                idx = np.random.randint(len(x), size=int(.3 * len(x)))
+                idx = np.random.randint(len(x), size=int(.30 * len(x)))
             else:
                 raise ValueError('invalid value for parameter Type')
 
@@ -233,8 +251,8 @@ class LinearLogisticRegression():
             raise ValueError('verbose must be smaller than maxIter')
 
         # static codes
-        def wgrad(Ob,x,y): return (1/Ob.m) * (np.dot(x.T, (Ob.Hyp(x =x ,w = w,bias = bias) - y)))
-        def bgrad(Ob,x,y): return (1/Ob.m) * np.sum(Ob.Hyp(x=x,w=w,bias=bias) - y)
+        def grad(Ob,x,y,W,B): return (1/Ob.m) * (np.dot(x.T, (Ob.predict(x =x ,w = W,bias = B) - y)))
+        def bias_grad(Ob,x,y,W,B) : return (1/Ob.m) * np.sum(Ob.predict(x=x,w=W,bias = B) - y) 
         def choose_random_values(x, y, idx): return (x[idx], y[idx])
 
         # starting the algorithm
@@ -242,23 +260,19 @@ class LinearLogisticRegression():
 
             if Type != 'batch':
                 random_x, random_y = choose_random_values(x= x, y=y, idx=idx)
-                if fit_bias : 
-                    temp_bias = bias - lr * bgrad(self,random_x,random_y)
-                w = w  - (lr * wgrad(self,random_x,random_y))
-                try:
-                    bias = temp_bias
-                except NameError:
-                    pass
+                G = grad(self,random_x,random_y,w,bias)
+                B_G = bias_grad(self,random_x,random_y,w,bias)
+                bias = bias - (lr * B_G)
+                #w = w * (1 - (self.alpha * lr))  - (lr * grad(self,random_x,random_y))
+                w = w - (lr * (G + (self.alpha * w)))
                 costs.append(cost := self.loss(A=los,x=random_x,y=random_y,w=w,bias = bias))
 
             else:
-                if fit_bias:
-                    temp_bias = bias - lr * bgrad(self,x,y)
-                w = w  - (lr * wgrad(self,x,y))
-                try:
-                    bias = temp_bias
-                except NameError:
-                    pass
+                G = grad(self, x, y, w, bias)
+                B_G = bias_grad(self,x,y,w,bias)
+                bias = bias - (lr * B_G)
+                #w = w * (1 - (self.alpha * lr)) - (lr * grad(self,x,y))
+                w = w - lr * (G + (self.alpha * w))
                 costs.append(cost := self.loss(A=los,x=x,y=y,w=w,bias = bias ))
             
             iterNum += 1
@@ -267,6 +281,7 @@ class LinearLogisticRegression():
                 print('\n\niteration no. {}\nbias : {}\ncoefficients : {}\ncost : {}\n'.format(
                     iterNum, bias, w, float(cost)))
                 verbose -=1
+                print(len(costs))
             ##########################################################
             try:
                 if abs(costs[-1] - costs[-2]) < converLim:
