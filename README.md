@@ -2,8 +2,6 @@
 
 welcome.
 the repository is my journey in machine learning.
-i write algorithms , i do my research , i implement.
-note : docstrings are not complete.
 
 project contents :
 
