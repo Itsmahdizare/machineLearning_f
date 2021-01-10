@@ -33,9 +33,14 @@ project contents :
 
 
 What's new in version:
+
+1.1.3:
+    added penalty to algorithms.
+
+1.1.2:
+    minor improvements
     
 1.1.1:
-    read me updated.
     deleted house price data.
 
 1.1.0:
