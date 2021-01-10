@@ -12,21 +12,18 @@ class CustomErrors(Exception):
     def __str__(self):
         return repr(self.message)
 
-
 class NoObjectError(CustomErrors):
     pass
 
-
 class ActiveFuncError(CustomErrors):
     pass
-
 
 class DimentionError(CustomErrors):
     pass
 
 class ShapeError(CustomErrors):
     pass
-
+#######################################################################
 
 class CustomWarnings(Warning):
     def __init__(self,message):
@@ -36,7 +33,7 @@ class CustomWarnings(Warning):
 
 class LearningRateWarning(CustomWarnings):
     pass
-
+########################################################################
 
 def NumpyErrorCheck(*args):
     for arg in args:
